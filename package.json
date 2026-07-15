@@ -1,0 +1,19 @@
+{
+  "name": "routepilot",
+  "version": "1.0.0",
+  "description": "GearUP Booster-style gaming route optimizer — Vietnam to Hong Kong optimized",
+  "main": "main.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "electron .",
+    "start:live": "set ROUTEPILOT_LIVE=1&& electron ."
+  },
+  "dependencies": {
+    "electron": "^30.0.0"
+  },
+  "allowScripts": {
+    "electron@30.5.1": true
+  }
+}

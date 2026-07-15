@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RoutePilot</title>
+  <meta name="description" content="RoutePilot — Premium game network optimizer for low-latency routing" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app" id="app">
+
+    <!-- ═══════ LEFT SIDEBAR ═══════ -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand" id="sidebarBrand">
+        <span class="brand-icon">◈</span>
+        <span class="brand-text">RoutePilot</span>
+        <span class="brand-badge">PRO</span>
+      </div>
+
+      <div class="sidebar-section-label">GAMES</div>
+      <ul class="game-list" id="gameList">
+        <!-- Populated by JS -->
+      </ul>
+
+      <div class="sidebar-footer" id="sidebarFooter">
+        <div class="engine-status">
+          <span class="status-dot" id="engineDot"></span>
+          <span class="engine-text" id="engineText">Engine Idle</span>
+        </div>
+        <div class="engine-version">v2.4.1</div>
+      </div>
+    </aside>
+
+    <!-- ═══════ MAIN CONTENT ═══════ -->
+    <main class="main" id="mainContent">
+
+      <!-- TOP BAR -->
+      <header class="topbar" id="topbar">
+        <div class="topbar-left">
+          <h1 class="topbar-game-name" id="topbarGameName">Select a Game</h1>
+          <div class="server-selector" id="serverSelector">
+            <span class="material-icons-round server-icon">dns</span>
+            <select id="serverDropdown" class="server-dropdown">
+              <option value="">— Choose Server —</option>
+            </select>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <button class="topbar-btn" id="retestBtn" title="Re-test routes">
+            <span class="material-icons-round">refresh</span>
+          </button>
+          <button class="topbar-btn" id="settingsBtn" title="Settings">
+            <span class="material-icons-round">settings</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- HERO: BOOST AREA -->
+      <section class="hero" id="heroSection">
+        <div class="boost-circle-container" id="boostContainer">
+          <div class="boost-ring boost-ring--outer" id="boostRingOuter"></div>
+          <div class="boost-ring boost-ring--mid" id="boostRingMid"></div>
+          <div class="boost-ring boost-ring--inner" id="boostRingInner"></div>
+          <button class="boost-circle" id="boostBtn" title="Start Boost">
+            <span class="boost-icon material-icons-round" id="boostIcon">bolt</span>
+            <div class="boost-ping" id="boostPing">
+              <span class="ping-value" id="pingValue">--</span>
+              <span class="ping-unit">ms</span>
+            </div>
+          </button>
+          <div class="boost-status" id="boostStatus">Ready to Boost</div>
+        </div>
+
+        <div class="hero-stats" id="heroStats">
+          <div class="stat-card stat-card--before" id="statBefore">
+            <div class="stat-label">BEFORE</div>
+            <div class="stat-value" id="beforePingValue">--</div>
+            <div class="stat-sub">ms latency</div>
+          </div>
+          <div class="stat-card stat-card--after" id="statAfter">
+            <div class="stat-label">CURRENT</div>
+            <div class="stat-value" id="afterPingValue">--</div>
+            <div class="stat-sub">ms latency</div>
+          </div>
+          <div class="stat-card stat-card--improve" id="statImprove">
+            <div class="stat-label">IMPROVED</div>
+            <div class="stat-value" id="improveValue">--%</div>
+            <div class="stat-sub">reduction</div>
+          </div>
+          <div class="stat-card stat-card--session" id="statSession">
+            <div class="stat-label">SESSION</div>
+            <div class="stat-value" id="sessionTimer">00:00:00</div>
+            <div class="stat-sub">duration</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ROUTE VISUALIZATION -->
+      <section class="route-visualization" id="routeVisualization">
+        <div class="route-node route-node--you">
+          <span class="route-node-emoji">🖥️</span>
+          <span class="route-node-label">You</span>
+          <span class="route-node-detail" id="routeYouDetail">Vietnam</span>
+        </div>
+        <div class="route-line" id="routeLine1">
+          <div class="route-pulse" id="routePulse1"></div>
+          <span class="route-latency" id="routeLat1">-- ms</span>
+        </div>
+        <div class="route-node route-node--relay">
+          <span class="route-node-emoji">📡</span>
+          <span class="route-node-label" id="relayName">Relay</span>
+          <span class="route-node-detail" id="relayDetail">--</span>
+        </div>
+        <div class="route-line" id="routeLine2">
+          <div class="route-pulse" id="routePulse2"></div>
+          <span class="route-latency" id="routeLat2">-- ms</span>
+        </div>
+        <div class="route-node route-node--server">
+          <span class="route-node-emoji">🎮</span>
+          <span class="route-node-label">Game Server</span>
+          <span class="route-node-detail" id="serverDetail">Hong Kong</span>
+        </div>
+      </section>
+
+      <!-- LIVE METRICS -->
+      <section class="metrics-section" id="metricsSection">
+        <div class="ping-graph-container" id="pingGraphContainer">
+          <div class="graph-header">
+            <span class="graph-title">Live Latency</span>
+            <span class="graph-legend" id="graphLegend">-- ms avg</span>
+          </div>
+          <canvas id="pingGraph"></canvas>
+        </div>
+
+        <div class="route-cards-container" id="routeCardsContainer">
+          <div class="route-cards-header">
+            <span class="route-cards-title">Available Routes</span>
+            <span class="route-cards-count" id="routeCount">0 relays</span>
+          </div>
+          <div class="route-cards-grid" id="routeCardsGrid">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- AIR STATUS BAR -->
+      <div class="air-status-bar" id="airStatusBar">
+        <div class="air-indicator">
+          <span class="air-dot" id="airDot"></span>
+          <span class="air-label" id="airLabel">AIR Inactive</span>
+        </div>
+        <div class="air-stats">
+          <div class="air-stat">
+            <span class="air-stat-value" id="airHotStandby">0</span>
+            <span class="air-stat-label">Standby</span>
+          </div>
+          <div class="air-stat">
+            <span class="air-stat-value" id="airSwitches">0</span>
+            <span class="air-stat-label">Switches</span>
+          </div>
+          <div class="air-stat">
+            <span class="air-stat-value" id="airUptime">00:00</span>
+            <span class="air-stat-label">Uptime</span>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- ═══════ SETTINGS PANEL ═══════ -->
+    <div class="settings-overlay" id="settingsOverlay"></div>
+    <div class="settings-panel" id="settingsPanel">
+      <div class="settings-header">
+        <h2 class="settings-title">Settings</h2>
+        <button class="settings-close" id="settingsClose" title="Close">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <div class="settings-body">
+        <div class="setting-group">
+          <label class="setting-label" for="settingGame">Preferred Game</label>
+          <select id="settingGame" class="setting-select"></select>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label" for="settingServer">Preferred Server / Region</label>
+          <select id="settingServer" class="setting-select"></select>
+        </div>
+        <div class="setting-group setting-row">
+          <div>
+            <label class="setting-label">Auto-Boost</label>
+            <p class="setting-hint">Automatically boost when game launches</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="settingAutoBoost" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label" for="settingAIR">AIR Sensitivity</label>
+          <p class="setting-hint">How aggressively AIR switches routes (1–10)</p>
+          <div class="slider-row">
+            <input type="range" id="settingAIR" class="setting-slider" min="1" max="10" value="5" />
+            <span class="slider-value" id="airSensitivityValue">5</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ TOAST CONTAINER ═══════ -->
+    <div class="toast-container" id="toastContainer"></div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
