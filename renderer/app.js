@@ -20,6 +20,7 @@ const state = {
   stats: { avgPing: 0, minPing: 999, maxPing: 0, routeSwitches: 0 },
   sessionTimerInterval: null,
   graphRAF: null,
+  hasAnyRealRelay: false,   // true only if a relay has a real WireGuard configPath
 };
 
 // ── DOM Cache ──────────────────────────────────────
@@ -41,6 +42,8 @@ const DOM_IDS = [
   'settingsOverlay', 'settingsPanel', 'settingsClose',
   'settingGame', 'settingServer', 'settingAutoBoost', 'settingAIR', 'airSensitivityValue',
   'toastContainer',
+  'demoBanner',
+  'winMinimizeBtn', 'winMaximizeBtn', 'winMaximizeIcon', 'winCloseBtn',
 ];
 
 // ── API Shorthand ──────────────────────────────────
@@ -52,16 +55,71 @@ const api = window.routepilot || {};
 document.addEventListener('DOMContentLoaded', () => {
   cacheDom();
   bindEvents();
+  bindWindowControls();
   initCanvas();
   loadGames();
   loadSettings();
   startPingSubscription();
   startAIRSubscriptions();
+  checkRelayHonesty();
 });
 
 function cacheDom() {
   for (const id of DOM_IDS) {
     el[id] = document.getElementById(id);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  WINDOW CONTROLS (titlebar — window is frameless)
+// ═══════════════════════════════════════════════════
+function bindWindowControls() {
+  if (!el.winMinimizeBtn) return;
+
+  el.winMinimizeBtn.addEventListener('click', () => {
+    api.windowMinimize && api.windowMinimize();
+  });
+
+  el.winMaximizeBtn.addEventListener('click', async () => {
+    if (!api.windowMaximizeToggle) return;
+    const isMaximized = await api.windowMaximizeToggle();
+    setMaximizeIcon(isMaximized);
+  });
+
+  el.winCloseBtn.addEventListener('click', () => {
+    api.windowClose && api.windowClose();
+  });
+
+  if (api.onWindowMaximizedChange) {
+    api.onWindowMaximizedChange((isMaximized) => setMaximizeIcon(isMaximized));
+  }
+
+  if (api.windowIsMaximized) {
+    api.windowIsMaximized().then(setMaximizeIcon);
+  }
+}
+
+function setMaximizeIcon(isMaximized) {
+  if (!el.winMaximizeIcon) return;
+  el.winMaximizeIcon.textContent = isMaximized ? 'filter_none' : 'crop_square';
+  el.winMaximizeBtn.title = isMaximized ? 'Restore' : 'Maximize';
+}
+
+// ═══════════════════════════════════════════════════
+//  RELAY HONESTY CHECK
+//  Shows a persistent banner + badges whenever there is no real WireGuard
+//  relay configured, so "Boost" never silently implies it changed real
+//  traffic when it's actually just a simulation.
+// ═══════════════════════════════════════════════════
+async function checkRelayHonesty() {
+  try {
+    const status = await api.boostStatus();
+    state.hasAnyRealRelay = !!(status && status.hasAnyRealRelay);
+  } catch {
+    state.hasAnyRealRelay = false;
+  }
+  if (el.demoBanner) {
+    el.demoBanner.hidden = state.hasAnyRealRelay;
   }
 }
 
@@ -236,12 +294,16 @@ function renderRouteCards() {
 
     const latClass = lat < 30 ? 'latency-good' : lat < 60 ? 'latency-ok' : 'latency-bad';
     const rankClass = rank <= 3 ? `rank-${rank}` : '';
+    const simBadge = route.simulated
+      ? '<span class="route-card-sim-badge" title="No real WireGuard relay configured — this number is simulated, not a real measurement">SIM</span>'
+      : '';
 
     card.innerHTML = `
       <div class="route-card-rank ${rankClass}">${rank}</div>
       <div class="route-card-header">
         <span class="route-card-flag">${regionFlag(route.region || route.relay || '')}</span>
         <span class="route-card-name">${escHtml(route.relay || route.name || `Relay ${rank}`)}</span>
+        ${simBadge}
       </div>
       <div class="route-card-metrics">
         <div class="route-metric">
@@ -320,19 +382,19 @@ async function startBoosting() {
       el.beforePingValue.textContent = Math.round(state.beforePing);
     }
 
-    setBoostState('boosted');
+    setBoostState('boosted', isSimulated);
     startSessionTimer();
     startAIR();
     showToast(
       isSimulated
-        ? 'Boost active (demo mode — add a WireGuard .conf in relays/ for real routing)'
+        ? 'Boost "active" in demo mode — this is NOT rerouting your real traffic. Add a WireGuard .conf in relays/ for a real effect.'
         : 'Boost activated! Route optimized.',
-      isSimulated ? 'info' : 'success'
+      isSimulated ? 'warning' : 'success'
     );
 
     // Update engine status
     el.engineDot.classList.add('active');
-    el.engineText.textContent = 'Engine Active';
+    el.engineText.textContent = isSimulated ? 'Engine Active (Demo)' : 'Engine Active';
 
   } catch (err) {
     console.error('Boost start failed:', err);
@@ -366,7 +428,7 @@ async function stopBoosting() {
   }
 }
 
-function setBoostState(mode) {
+function setBoostState(mode, isSimulated) {
   const c = el.boostContainer;
   c.classList.remove('boosted', 'connecting', 'stopping');
   el.routeVisualization.classList.remove('boosted');
@@ -379,7 +441,7 @@ function setBoostState(mode) {
       break;
     case 'boosted':
       c.classList.add('boosted');
-      el.boostStatus.textContent = 'Boosted';
+      el.boostStatus.textContent = isSimulated ? 'Boosted (Demo — not real)' : 'Boosted';
       el.boostIcon.textContent = 'flash_on';
       el.routeVisualization.classList.add('boosted');
       break;

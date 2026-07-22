@@ -29,6 +29,7 @@
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 24px;
+  --titlebar-height: 34px;
   --font-display: 'Space Grotesk', sans-serif;
   --font-body: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
@@ -54,6 +55,11 @@ html, body {
   user-select: none;
 }
 
+body {
+  display: flex;
+  flex-direction: column;
+}
+
 /* ── Scrollbar ──────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
@@ -70,11 +76,111 @@ html, body {
   background: var(--text-muted);
 }
 
+/* ═══════════════════════════════════════════════════
+   CUSTOM TITLEBAR
+   (window is created with frame:false, so on Windows/Linux there is no
+   native minimize/maximize/close chrome at all — this replaces it)
+   ═══════════════════════════════════════════════════ */
+.titlebar {
+  height: var(--titlebar-height);
+  min-height: var(--titlebar-height);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-default);
+  -webkit-app-region: drag;
+}
+.titlebar-drag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  height: 100%;
+}
+.titlebar-icon {
+  font-size: 13px;
+  color: var(--accent-primary);
+}
+.titlebar-title {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+.titlebar-controls {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  -webkit-app-region: no-drag;
+}
+.titlebar-btn {
+  width: 46px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+  -webkit-app-region: no-drag;
+}
+.titlebar-btn .material-icons-round {
+  font-size: 16px;
+}
+.titlebar-btn:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+.titlebar-btn--close:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+/* ═══════════════════════════════════════════════════
+   DEMO MODE BANNER
+   ═══════════════════════════════════════════════════ */
+.demo-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: rgba(255, 176, 32, 0.1);
+  border-bottom: 1px solid rgba(255, 176, 32, 0.3);
+  flex-shrink: 0;
+}
+.demo-banner-icon {
+  font-size: 18px;
+  color: var(--warning);
+  flex-shrink: 0;
+}
+.demo-banner-text {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.demo-banner-text strong {
+  color: var(--warning);
+  font-weight: 600;
+}
+.demo-banner-text code {
+  font-family: var(--font-mono);
+  background: var(--bg-surface);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
 /* ── App Grid ───────────────────────────────────── */
 .app {
   display: grid;
   grid-template-columns: 250px 1fr;
-  height: 100vh;
+  flex: 1;
+  min-height: 0;
   min-width: 900px;
   background: var(--bg-primary);
   position: relative;
@@ -262,14 +368,11 @@ html, body {
   border-bottom: 1px solid var(--border-default);
   background: var(--bg-secondary);
   flex-shrink: 0;
-  backdrop-filter: blur(12px);
-  -webkit-app-region: drag;
 }
 .topbar-left {
   display: flex;
   align-items: center;
   gap: 20px;
-  -webkit-app-region: no-drag;
 }
 .topbar-game-name {
   font-family: var(--font-display);
@@ -313,7 +416,6 @@ html, body {
   display: flex;
   align-items: center;
   gap: 6px;
-  -webkit-app-region: no-drag;
 }
 .topbar-btn {
   width: 36px;
@@ -744,6 +846,18 @@ html, body {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
+}
+.route-card-sim-badge {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--warning);
+  border: 1px solid rgba(255, 176, 32, 0.4);
+  border-radius: 4px;
+  padding: 1px 5px;
+  text-transform: uppercase;
 }
 .route-card-metrics {
   display: flex;

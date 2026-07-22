@@ -5,12 +5,6 @@
 // Optimized for Vietnam → Hong Kong routing (target: 20-30ms from 70-80ms)
 // =============================================================================
 
-/**
- * GAMES — Supported game catalog with real/representative server endpoints.
- * Each game includes known Asia-region server endpoints.
- * Riot Games uses known IP ranges for HK/Asia infrastructure.
- * Other publishers use representative Asia datacenter IPs.
- */
 const GAMES = [
   {
     id: 'valorant',
@@ -116,12 +110,6 @@ const GAMES = [
   },
 ];
 
-/**
- * RELAY_NODES — Intermediate VPS relay positions for traffic routing.
- * These are strategic hop points optimized for Vietnam → HK path.
- * Port 51820 = standard WireGuard UDP port.
- * configPath is null until the user configures their WireGuard tunnel.
- */
 const RELAY_NODES = [
   {
     id: 'hk-direct',
@@ -185,9 +173,6 @@ const RELAY_NODES = [
   },
 ];
 
-/**
- * REGIONS — Supported geographic regions for server/relay filtering.
- */
 const REGIONS = [
   { id: 'hk', name: 'Hong Kong', flag: '🇭🇰' },
   { id: 'tw', name: 'Taiwan', flag: '🇹🇼' },
@@ -197,11 +182,6 @@ const REGIONS = [
   { id: 'vn', name: 'Vietnam', flag: '🇻🇳' },
 ];
 
-/**
- * getGameServers — Retrieve the servers array for a specific game.
- * @param {string} gameId — The game identifier (e.g., 'valorant')
- * @returns {Array} Array of server objects, or empty array if game not found
- */
 function getGameServers(gameId) {
   const game = GAMES.find((g) => g.id === gameId);
   return game ? game.servers : [];

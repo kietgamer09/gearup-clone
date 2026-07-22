@@ -14,6 +14,12 @@ contextBridge.exposeInMainWorld('routepilot', {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSetting: (key, value) => ipcRenderer.invoke('settings:set', key, value),
 
+  // ── Window controls (frameless window — no native chrome) ──────────────
+  windowMinimize: () => ipcRenderer.invoke('window:minimize'),
+  windowMaximizeToggle: () => ipcRenderer.invoke('window:maximize-toggle'),
+  windowClose: () => ipcRenderer.invoke('window:close'),
+  windowIsMaximized: () => ipcRenderer.invoke('window:is-maximized'),
+
   // ── Event subscriptions (main → renderer) ───────────────────────────────
   onPingUpdate: (callback) => {
     ipcRenderer.on('ping:update', (_event, data) => callback(data));
@@ -23,6 +29,9 @@ contextBridge.exposeInMainWorld('routepilot', {
   },
   onAIRStatus: (callback) => {
     ipcRenderer.on('air:status-update', (_event, data) => callback(data));
+  },
+  onWindowMaximizedChange: (callback) => {
+    ipcRenderer.on('window:maximized-change', (_event, isMaximized) => callback(isMaximized));
   },
   removeAllListeners: (channel) => {
     ipcRenderer.removeAllListeners(channel);

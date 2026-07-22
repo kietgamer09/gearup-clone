@@ -1,6 +1,10 @@
 node_modules/
 dist/
 out/
+RoutePilot-win32-x64/
+RoutePilot-win32-ia32/
+RoutePilot-win32-arm64/
+RoutePilot-*/
 *.log
 .DS_Store
 Thumbs.db

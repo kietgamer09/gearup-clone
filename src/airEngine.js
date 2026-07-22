@@ -2,31 +2,11 @@
 
 // =============================================================================
 // airEngine.js — Adaptive Intelligent Routing (AIR) Engine
-// Continuously monitors route quality and dynamically switches to better relays
-// when sustained improvement is detected.
 // =============================================================================
 
 const { EventEmitter } = require('events');
 
-/**
- * AIREngine — Adaptive Intelligent Routing Engine.
- *
- * Continuously monitors the active relay route, periodically tests alternatives,
- * and switches to a better relay path when sustained improvement (>15% for 2
- * consecutive cycles) is detected. Maintains a hot-standby list of top relays.
- *
- * Events:
- *  - 'ping-update'    : { timestamp, latency, jitter, loss, relay, routeId }
- *  - 'route-changed'  : { oldRoute, newRoute, reason, improvement }
- *  - 'status-update'  : { status, message }
- *
- * @extends EventEmitter
- */
 class AIREngine extends EventEmitter {
-  /**
-   * @param {Object} routeOptimizer — The routeOptimizer module (must export
-   *   measureRelayPath, scoreRoute, findBestRelayPath)
-   */
   constructor(routeOptimizer) {
     super();
 
@@ -36,7 +16,6 @@ class AIREngine extends EventEmitter {
 
     this._optimizer = routeOptimizer;
 
-    // Runtime state
     this._running = false;
     this._intervalHandle = null;
     this._config = null;
@@ -44,11 +23,8 @@ class AIREngine extends EventEmitter {
     this._hotStandby = [];
     this._cycleCount = 0;
 
-    // Candidate tracking for sustained-improvement detection
-    // Maps relayId → { betterCount: number, lastScore: number }
     this._candidateTracker = new Map();
 
-    // Session statistics
     this._stats = {
       sessionStart: null,
       totalPings: 0,
@@ -59,15 +35,6 @@ class AIREngine extends EventEmitter {
     };
   }
 
-  /**
-   * start — Begin adaptive route monitoring.
-   *
-   * @param {Object} config
-   * @param {Object} config.targetServer — Target game server { host, port, label }
-   * @param {Array<Object>} config.relays — Available relay nodes
-   * @param {number} [config.intervalMs=10000] — Monitoring interval in ms
-   * @param {number} [config.maxHotStandby=3] — Max relays to keep in hot-standby
-   */
   async start({ targetServer, relays, intervalMs = 10000, maxHotStandby = 3 }) {
     if (this._running) {
       this.emit('status-update', {
@@ -77,7 +44,6 @@ class AIREngine extends EventEmitter {
       return;
     }
 
-    // Validate inputs
     if (!targetServer || !targetServer.host || !targetServer.port) {
       throw new Error('targetServer with host and port is required');
     }
@@ -96,7 +62,6 @@ class AIREngine extends EventEmitter {
       message: 'AIR Engine starting — running initial relay scan...',
     });
 
-    // --- Initial full scan to find best relay path ---
     try {
       const initialScan = await this._optimizer.findBestRelayPath(relays, targetServer, {
         trials: 4,
@@ -106,7 +71,6 @@ class AIREngine extends EventEmitter {
       if (initialScan.best) {
         this._currentRoute = initialScan.best;
 
-        // Build hot-standby from top N results (excluding current best)
         this._hotStandby = initialScan.results
           .filter((r) => r.relay.id !== this._currentRoute.relay.id && r.measurement.success)
           .slice(0, maxHotStandby);
@@ -129,13 +93,9 @@ class AIREngine extends EventEmitter {
       });
     }
 
-    // --- Start monitoring interval ---
     this._intervalHandle = setInterval(() => this._monitorCycle(), intervalMs);
   }
 
-  /**
-   * stop — Stop monitoring and clean up all timers.
-   */
   stop() {
     if (!this._running) return;
 
@@ -154,18 +114,10 @@ class AIREngine extends EventEmitter {
     });
   }
 
-  /**
-   * getCurrentRoute — Returns the currently active route.
-   * @returns {Object|null} Current route object or null if none selected
-   */
   getCurrentRoute() {
     return this._currentRoute;
   }
 
-  /**
-   * getStats — Returns session statistics.
-   * @returns {Object} Session stats including avg/min/max latency, route switches, etc.
-   */
   getStats() {
     const avgLatency =
       this._stats.totalPings > 0
@@ -195,21 +147,11 @@ class AIREngine extends EventEmitter {
     };
   }
 
-  // ===========================================================================
-  // Private Methods
-  // ===========================================================================
-
-  /**
-   * _monitorCycle — Runs a single monitoring cycle.
-   * Every cycle: ping current route.
-   * Every 3rd cycle: also test alternative relays and possibly switch.
-   */
   async _monitorCycle() {
     if (!this._running) return;
 
     this._cycleCount++;
 
-    // --- Step 1: Ping current route ---
     if (this._currentRoute) {
       try {
         const ping = await this._optimizer.measureRelayPath(
@@ -218,11 +160,9 @@ class AIREngine extends EventEmitter {
           { trials: 3, delay: 100 }
         );
 
-        // Update current route measurement
         this._currentRoute.measurement = ping;
         this._currentRoute.score = this._optimizer.scoreRoute(ping);
 
-        // Update session stats
         if (ping.success && ping.estimatedTotalMs !== null) {
           this._stats.totalPings++;
           this._stats.latencySum += ping.estimatedTotalMs;
@@ -234,7 +174,6 @@ class AIREngine extends EventEmitter {
           }
         }
 
-        // Emit ping update
         this.emit('ping-update', {
           timestamp: Date.now(),
           latency: ping.estimatedTotalMs,
@@ -244,7 +183,6 @@ class AIREngine extends EventEmitter {
           routeId: this._currentRoute.relay.id,
         });
 
-        // Check for degradation
         if (!ping.success || ping.loss > 30) {
           this.emit('status-update', {
             status: 'degraded',
@@ -260,17 +198,11 @@ class AIREngine extends EventEmitter {
       }
     }
 
-    // --- Step 2: Every 3rd cycle, test alternatives ---
     if (this._cycleCount % 3 === 0) {
       await this._testAlternatives();
     }
   }
 
-  /**
-   * _testAlternatives — Tests alternative relay paths and switches if a
-   * significantly better route is sustained for 2 consecutive cycles.
-   * Improvement threshold: >15% better score.
-   */
   async _testAlternatives() {
     if (!this._currentRoute || !this._config) return;
 
@@ -290,12 +222,10 @@ class AIREngine extends EventEmitter {
 
       const currentScore = this._currentRoute.score;
 
-      // Update hot-standby list
       this._hotStandby = scan.results
         .filter((r) => r.relay.id !== this._currentRoute.relay.id && r.measurement.success)
         .slice(0, this._config.maxHotStandby);
 
-      // Check each alternative for sustained improvement
       for (const candidate of scan.results) {
         if (candidate.relay.id === this._currentRoute.relay.id) continue;
         if (!candidate.measurement.success) continue;
@@ -303,7 +233,6 @@ class AIREngine extends EventEmitter {
         const improvementRatio = (currentScore - candidate.score) / currentScore;
 
         if (improvementRatio > 0.15) {
-          // This candidate is >15% better — track it
           const tracker = this._candidateTracker.get(candidate.relay.id) || {
             betterCount: 0,
             lastScore: Infinity,
@@ -313,7 +242,6 @@ class AIREngine extends EventEmitter {
           tracker.lastScore = candidate.score;
           this._candidateTracker.set(candidate.relay.id, tracker);
 
-          // Sustained improvement for 2 consecutive check cycles → switch!
           if (tracker.betterCount >= 2) {
             const oldRoute = { ...this._currentRoute };
             this._currentRoute = candidate;
@@ -344,10 +272,9 @@ class AIREngine extends EventEmitter {
                 `(${candidate.measurement.estimatedTotalMs}ms, ${improvementPct}% better)`,
             });
 
-            return; // Only switch once per cycle
+            return;
           }
         } else {
-          // Not better enough — reset tracker for this candidate
           this._candidateTracker.delete(candidate.relay.id);
         }
       }

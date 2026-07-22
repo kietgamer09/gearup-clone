@@ -55,7 +55,10 @@ function createWindow() {
     },
   };
 
-  // Platform-specific frameless setup
+  // Platform-specific frameless setup.
+  // On macOS we keep the native traffic-light buttons (hidden titlebar style).
+  // On Windows/Linux we go fully frameless and draw our own titlebar with
+  // minimize/maximize/close controls (see renderer titlebar + IPC below).
   if (process.platform === 'darwin') {
     windowOptions.frame = false;
     windowOptions.titleBarStyle = 'hidden';
@@ -71,12 +74,49 @@ function createWindow() {
     mainWindow.show();
   });
 
+  // Keep renderer's maximize icon in sync if the user double-clicks the
+  // titlebar or uses OS window snapping.
+  mainWindow.on('maximize', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('window:maximized-change', true);
+    }
+  });
+  mainWindow.on('unmaximize', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('window:maximized-change', false);
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 }
 
 // ── IPC Handlers ────────────────────────────────────────────────────────────
+
+// Window controls (needed because the window is frameless — no native
+// minimize/maximize/close buttons exist on Windows/Linux without these).
+ipcMain.handle('window:minimize', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.minimize();
+});
+
+ipcMain.handle('window:maximize-toggle', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  if (mainWindow.isMaximized()) {
+    mainWindow.unmaximize();
+  } else {
+    mainWindow.maximize();
+  }
+  return mainWindow.isMaximized();
+});
+
+ipcMain.handle('window:close', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
+});
+
+ipcMain.handle('window:is-maximized', () => {
+  return !!(mainWindow && !mainWindow.isDestroyed() && mainWindow.isMaximized());
+});
 
 // Games
 ipcMain.handle('games:list', () => {
@@ -94,6 +134,14 @@ function resolveTargetServer(options = {}) {
     if (match) return match;
   }
   return { id: 'val-hk1', label: 'Hong Kong 1', region: 'Hong Kong', host: '43.229.67.1', port: 443 };
+}
+
+// Whether ANY relay node currently has a real WireGuard config attached.
+// If this is false, "boosting" cannot possibly change real traffic — it's
+// pure simulation, and the UI should say so plainly rather than implying
+// a real speedup happened.
+function hasAnyRealRelay() {
+  return RELAY_NODES.some((r) => !!r.configPath);
 }
 
 function flattenRelayResults(results = []) {
@@ -160,6 +208,9 @@ ipcMain.handle('boost:start', async (_event, route) => {
       measurement: route.measurement || { estimatedTotalMs: route.avgLatency || route.latency },
     };
     const result = await tunnelManager.connect(tunnelRoute);
+    // Surface whether ANY real relay exists at all, independent of this
+    // specific route, so the renderer can show an honest "demo mode" state.
+    result.hasAnyRealRelay = hasAnyRealRelay();
     return result;
   } catch (err) {
     console.error('[Boost] Start failed:', err.message);
@@ -178,7 +229,9 @@ ipcMain.handle('boost:stop', async () => {
 });
 
 ipcMain.handle('boost:status', () => {
-  return tunnelManager.getStatus();
+  const status = tunnelManager.getStatus();
+  status.hasAnyRealRelay = hasAnyRealRelay();
+  return status;
 });
 
 // AIR Engine

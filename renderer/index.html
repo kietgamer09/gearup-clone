@@ -12,6 +12,26 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+
+  <!-- ═══════ CUSTOM TITLEBAR (window is frameless — no native controls) ═══════ -->
+  <div class="titlebar" id="titlebar">
+    <div class="titlebar-drag">
+      <span class="titlebar-icon">◈</span>
+      <span class="titlebar-title">RoutePilot</span>
+    </div>
+    <div class="titlebar-controls">
+      <button class="titlebar-btn" id="winMinimizeBtn" title="Minimize">
+        <span class="material-icons-round">remove</span>
+      </button>
+      <button class="titlebar-btn" id="winMaximizeBtn" title="Maximize">
+        <span class="material-icons-round" id="winMaximizeIcon">crop_square</span>
+      </button>
+      <button class="titlebar-btn titlebar-btn--close" id="winCloseBtn" title="Close">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+  </div>
+
   <div class="app" id="app">
 
     <!-- ═══════ LEFT SIDEBAR ═══════ -->
@@ -38,6 +58,17 @@
 
     <!-- ═══════ MAIN CONTENT ═══════ -->
     <main class="main" id="mainContent">
+
+      <!-- DEMO MODE BANNER — shown whenever no real relay/WireGuard config exists,
+           so boosting never silently pretends to change real traffic -->
+      <div class="demo-banner" id="demoBanner" hidden>
+        <span class="material-icons-round demo-banner-icon">info</span>
+        <span class="demo-banner-text">
+          Demo mode — no real relay configured yet. Latency shown is simulated and
+          <strong>Boost will not change your real in-game ping</strong> until you add a WireGuard
+          config to <code>relays/</code>. See the README for setup.
+        </span>
+      </div>
 
       <!-- TOP BAR -->
       <header class="topbar" id="topbar">

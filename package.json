@@ -8,7 +8,9 @@
   },
   "scripts": {
     "start": "electron .",
-    "start:live": "set ROUTEPILOT_LIVE=1&& electron ."
+    "start:live": "set ROUTEPILOT_LIVE=1&& electron .",
+    "package": "npx -y @electron/packager . RoutePilot --platform=win32 --arch=x64 --overwrite",
+    "build": "npx -y @electron/packager . RoutePilot --platform=win32 --arch=x64 --overwrite"
   },
   "dependencies": {
     "electron": "^30.0.0"
